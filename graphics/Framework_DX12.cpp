@@ -144,6 +144,8 @@ void Framework_DX12::Init()
 
     m_rtvDescriptorHeap = CreateDescriptorHeap(m_device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, FrameBufferCount);
     m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
+    UpdateRenderTargetViews(m_device, m_swapChain, m_rtvDescriptorHeap, FrameBufferCount);
 }
 
 void Framework_DX12::Update()
@@ -281,4 +283,22 @@ ComPtr<Framework_DX12::D3D12DescriptorHeapInterface> Framework_DX12::CreateDescr
     ThrowIfFailed(device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&descriptorHeap)));
 
     return descriptorHeap;
+}
+
+void Framework_DX12::UpdateRenderTargetViews(ComPtr<D3D12DeviceInterface> device, ComPtr<DXGISwapChainInterface> swapChain, ComPtr<D3D12DescriptorHeapInterface> descriptorHeap, UINT nFrameBuffer)
+{
+    const auto RTVDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
+    CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(descriptorHeap->GetCPUDescriptorHandleForHeapStart());
+    for (int i = 0; i < nFrameBuffer; ++i)
+    {
+        ComPtr<ID3D12Resource> backBuffer;
+        ThrowIfFailed(swapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
+
+        device->CreateRenderTargetView(backBuffer.Get(), nullptr, rtvHandle);
+
+        m_backBuffers[i] = backBuffer;
+
+        rtvHandle.Offset(RTVDescriptorSize);
+    }
 }

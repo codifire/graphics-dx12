@@ -4,13 +4,15 @@
 
 class Framework_DX12 : public Framework
 {
+protected:
     using D3D12DeviceInterface = ID3D12Device2;
     using D3D12CommandQueueInterface = ID3D12CommandQueue;
+    using D3D12DescriptorHeapInterface = ID3D12DescriptorHeap;
+
     using DXGIAdapterInterface = IDXGIAdapter4;
     using DXGISwapChainInterface = IDXGISwapChain4;
     using DXGIFactoryInterface = IDXGIFactory6;
-    using D3D12DescriptorHeapInterface = ID3D12DescriptorHeap;
-
+    
 public:
     Framework_DX12(UINT width, UINT height, bool useWarpDevice=false);
     ~Framework_DX12();
@@ -25,6 +27,7 @@ public:
     ComPtr<D3D12CommandQueueInterface> CreateCommandQueue(ComPtr<D3D12DeviceInterface> device, D3D12_COMMAND_LIST_TYPE type) const;
     ComPtr<DXGISwapChainInterface> CreateSwapChain(HWND hWnd, ComPtr<DXGIFactoryInterface> dxgiFactory, ComPtr<ID3D12CommandQueue> commandQueue, uint32_t width, uint32_t height, uint32_t bufferCount, bool supportTearing) const;
     ComPtr<D3D12DescriptorHeapInterface> CreateDescriptorHeap(ComPtr<D3D12DeviceInterface> device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors) const;
+    void UpdateRenderTargetViews(ComPtr<D3D12DeviceInterface> device, ComPtr<DXGISwapChainInterface> swapChain, ComPtr<D3D12DescriptorHeapInterface> descriptorHeap, UINT nFrameBuffer);
 
 private:
     static const UINT FrameBufferCount { 2 };
