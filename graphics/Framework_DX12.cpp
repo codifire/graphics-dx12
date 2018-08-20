@@ -150,6 +150,8 @@ void Framework_DX12::Init()
     m_commandAllocator = CreateCommandAllocator(m_device, D3D12_COMMAND_LIST_TYPE_DIRECT);
 
     m_commandList = CreateCommandList(m_device, m_commandAllocator, D3D12_COMMAND_LIST_TYPE_DIRECT);
+
+    m_fence = CreateFence(m_device);
 }
 
 void Framework_DX12::Update()
@@ -323,4 +325,11 @@ ComPtr<ID3D12GraphicsCommandList> Framework_DX12::CreateCommandList(ComPtr<D3D12
     ThrowIfFailed(commandList->Close());
 
     return commandList;
+}
+
+ComPtr<ID3D12Fence> Framework_DX12::CreateFence(ComPtr<D3D12DeviceInterface> device) const
+{
+    ComPtr<ID3D12Fence> fence;
+    ThrowIfFailed(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)));
+    return fence;
 }

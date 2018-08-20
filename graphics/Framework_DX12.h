@@ -30,6 +30,7 @@ public:
     void UpdateRenderTargetViews(ComPtr<D3D12DeviceInterface> device, ComPtr<DXGISwapChainInterface> swapChain, ComPtr<D3D12DescriptorHeapInterface> descriptorHeap, UINT nFrameBuffer);
     ComPtr<ID3D12CommandAllocator> CreateCommandAllocator(ComPtr<D3D12DeviceInterface> device, D3D12_COMMAND_LIST_TYPE type) const;
     ComPtr<ID3D12GraphicsCommandList> CreateCommandList(ComPtr<D3D12DeviceInterface> device, ComPtr<ID3D12CommandAllocator> commandAllocator, D3D12_COMMAND_LIST_TYPE type) const;
+    ComPtr<ID3D12Fence> CreateFence(ComPtr<D3D12DeviceInterface> device) const;
 
     protected:
     static const UINT FrameBufferCount { 2 };
@@ -60,7 +61,7 @@ public:
     
     ComPtr<ID3D12Fence> m_fence;
     UINT64 m_fenceValue { 0 };
-    HANDLE m_fenceEvent { };
+    HANDLE m_fenceEvent { }; // An OS event handle is used to allow the CPU thread to wait until the fence has been signaled with a particular value.
     
     // Window rectangle (used to toggle fullscreen state).
     RECT m_windowRect;
