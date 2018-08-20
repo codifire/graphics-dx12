@@ -148,6 +148,8 @@ void Framework_DX12::Init()
     UpdateRenderTargetViews(m_device, m_swapChain, m_rtvDescriptorHeap, FrameBufferCount);
 
     m_commandAllocator = CreateCommandAllocator(m_device, D3D12_COMMAND_LIST_TYPE_DIRECT);
+
+    m_commandList = CreateCommandList(m_device, m_commandAllocator, D3D12_COMMAND_LIST_TYPE_DIRECT);
 }
 
 void Framework_DX12::Update()
@@ -292,7 +294,7 @@ void Framework_DX12::UpdateRenderTargetViews(ComPtr<D3D12DeviceInterface> device
     const auto RTVDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
     CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(descriptorHeap->GetCPUDescriptorHandleForHeapStart());
-    for (int i = 0; i < nFrameBuffer; ++i)
+    for (UINT i = 0; i < nFrameBuffer; ++i)
     {
         ComPtr<ID3D12Resource> backBuffer;
         ThrowIfFailed(swapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
@@ -311,4 +313,14 @@ ComPtr<ID3D12CommandAllocator> Framework_DX12::CreateCommandAllocator(ComPtr<D3D
     ThrowIfFailed(device->CreateCommandAllocator(type, IID_PPV_ARGS(&commandAllocator)));
 
     return commandAllocator;
+}
+
+ComPtr<ID3D12GraphicsCommandList> Framework_DX12::CreateCommandList(ComPtr<D3D12DeviceInterface> device, ComPtr<ID3D12CommandAllocator> commandAllocator, D3D12_COMMAND_LIST_TYPE type) const
+{
+    ComPtr<ID3D12GraphicsCommandList> commandList;
+    ThrowIfFailed(device->CreateCommandList(0, type, commandAllocator.Get(), nullptr, IID_PPV_ARGS(&commandList)));
+
+    ThrowIfFailed(commandList->Close());
+
+    return commandList;
 }
