@@ -4,6 +4,12 @@
 
 class Framework_DX12 : public Framework
 {
+    using D3D12DeviceInterface = ID3D12Device2;
+    using D3D12CommandQueueInterface = ID3D12CommandQueue;
+    using DXGIAdapterInterface = IDXGIAdapter4;
+    using DXGISwapChainInterface = IDXGISwapChain4;
+    using DXGIFactoryInterface = IDXGIFactory6;
+
 public:
     Framework_DX12(UINT width, UINT height, bool useWarpDevice=false);
     ~Framework_DX12();
@@ -13,8 +19,13 @@ public:
     virtual void Render() override;
     virtual void Destroy() override;
 
+    void EnableDebugLayer() const;
+    ComPtr<D3D12DeviceInterface> CreateDevice(ComPtr<DXGIAdapterInterface> adapter) const;
+    ComPtr<D3D12CommandQueueInterface> CreateCommandQueue(ComPtr<D3D12DeviceInterface> device, D3D12_COMMAND_LIST_TYPE type) const;
+    ComPtr<IDXGISwapChain4> CreateSwapChain(HWND hWnd, ComPtr<DXGIFactoryInterface> dxgiFactory, ComPtr<ID3D12CommandQueue> commandQueue, uint32_t width, uint32_t height, uint32_t bufferCount, bool supportTearing) const;
+
 private:
-    static const UINT FrameBufferCount = 2;
+    static const UINT FrameBufferCount { 2 };
 
     // Pipeline objects.
     ComPtr<ID3D12GraphicsCommandList> m_commandList; // generally varies w.r.t number of threads recording drawing commands
@@ -24,8 +35,8 @@ private:
 
     ComPtr<ID3D12CommandQueue> m_commandQueue;
     
-    ComPtr<ID3D12Device> m_device; // display adapter. a system can also have a software display adapter that emulates 3D hardware functionality.
-    ComPtr<IDXGISwapChain4> m_swapChain;
+    ComPtr<D3D12DeviceInterface> m_device; // display adapter. a system can also have a software display adapter that emulates 3D hardware functionality.
+    ComPtr<DXGISwapChainInterface> m_swapChain;
     ComPtr<ID3D12Resource> m_backBuffers[FrameBufferCount]; // are basically textures (or render targets)
     ComPtr<ID3D12DescriptorHeap> m_rtvDescriptorHeap; // a "view" is a synonym for "descriptor". view (or descriptors) describe the resource to the GPU
     // since the swap chain contains multiple back buffer textures, one descriptor is needed to describe each back buffer texture.
@@ -33,23 +44,25 @@ private:
     // the size of a descriptor in a descriptor heap is vendor specific(Intel, NVidia, and AMD may store descriptors differently).
     // in order to correctly offset the index into the descriptor heap, the size of a single element in the descriptor heap needs 
     // to be queried during initialization.
-    UINT m_rtvDescriptorSize;
+    UINT m_rtvDescriptorSize { 0 };
 
     ComPtr<ID3D12PipelineState> m_pipelineState;
 
     // Synchronization objects.
-    UINT m_CurrentBackBufferIndex; // store the index of the current back buffer of the swap chain.
+    UINT m_CurrentBackBufferIndex { 0 }; // store the index of the current back buffer of the swap chain.
     
     ComPtr<ID3D12Fence> m_fence;
-    UINT64 m_fenceValue;
-    HANDLE m_fenceEvent;
+    UINT64 m_fenceValue { 0 };
+    HANDLE m_fenceEvent { };
     
     // Window rectangle (used to toggle fullscreen state).
     RECT g_WindowRect;
-    bool m_useFullScreen;
+    bool m_useFullScreen { false };
 
-    bool m_vSyncEnabled; // controls whether the swap chain's present method should wait for the next vertical refresh before presenting the rendered image to the screen.
-    bool m_supportTearing;
+    bool m_vSyncEnabled { false }; // controls whether the swap chain's present method should wait for the next vertical refresh before presenting the rendered image to the screen.
+    bool m_supportTearing { false };
 
-    bool m_useWarpDevice; // controls whether to use a software rasterizer (Windows Advanced Rasterization Platform - WARP) or not
+    bool m_useWarpDevice { false }; // controls whether to use a software rasterizer (Windows Advanced Rasterization Platform - WARP) or not
+
+    bool m_enableDebugLayer { CONF_BOOL_ENABLE_D3D_DEBUG_LAYER };
 };
