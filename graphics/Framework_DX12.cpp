@@ -139,6 +139,11 @@ void Framework_DX12::Init()
     }
 
     m_swapChain = CreateSwapChain(Win32Application::GetHwnd(), dxgiFactory, m_commandQueue, GetWidth(), GetHeight(), FrameBufferCount, allowTearing);
+    
+    m_currentBackBufferIndex = m_swapChain->GetCurrentBackBufferIndex();
+
+    m_rtvDescriptorHeap = CreateDescriptorHeap(m_device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, FrameBufferCount);
+    m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 }
 
 void Framework_DX12::Update()
@@ -257,4 +262,23 @@ ComPtr<Framework_DX12::DXGISwapChainInterface> Framework_DX12::CreateSwapChain(H
     ThrowIfFailed(swapChain1.As(&dxgiSwapChain));
 
     return dxgiSwapChain;
+}
+
+ComPtr<Framework_DX12::D3D12DescriptorHeapInterface> Framework_DX12::CreateDescriptorHeap(ComPtr<D3D12DeviceInterface> device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors) const
+{
+    ComPtr<D3D12DescriptorHeapInterface> descriptorHeap;
+
+    D3D12_DESCRIPTOR_HEAP_DESC desc = {};
+    desc.NumDescriptors = numDescriptors;
+    desc.Type = type;
+    desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+    desc.NodeMask = 0; // Zero for single-adapter operation
+
+    //desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE; // can optionally be set on a descriptor heap to indicate it is be bound
+    // to a command list for reference by shaders. Descriptor heaps created without this flag allow applications the option to stage 
+    // descriptors in CPU memory before copying them to a shader visible descriptor heap, as a convenience.
+
+    ThrowIfFailed(device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&descriptorHeap)));
+
+    return descriptorHeap;
 }

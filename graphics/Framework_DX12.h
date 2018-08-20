@@ -9,6 +9,7 @@ class Framework_DX12 : public Framework
     using DXGIAdapterInterface = IDXGIAdapter4;
     using DXGISwapChainInterface = IDXGISwapChain4;
     using DXGIFactoryInterface = IDXGIFactory6;
+    using D3D12DescriptorHeapInterface = ID3D12DescriptorHeap;
 
 public:
     Framework_DX12(UINT width, UINT height, bool useWarpDevice=false);
@@ -22,7 +23,8 @@ public:
     void EnableDebugLayer() const;
     ComPtr<D3D12DeviceInterface> CreateDevice(ComPtr<DXGIAdapterInterface> adapter) const;
     ComPtr<D3D12CommandQueueInterface> CreateCommandQueue(ComPtr<D3D12DeviceInterface> device, D3D12_COMMAND_LIST_TYPE type) const;
-    ComPtr<IDXGISwapChain4> CreateSwapChain(HWND hWnd, ComPtr<DXGIFactoryInterface> dxgiFactory, ComPtr<ID3D12CommandQueue> commandQueue, uint32_t width, uint32_t height, uint32_t bufferCount, bool supportTearing) const;
+    ComPtr<DXGISwapChainInterface> CreateSwapChain(HWND hWnd, ComPtr<DXGIFactoryInterface> dxgiFactory, ComPtr<ID3D12CommandQueue> commandQueue, uint32_t width, uint32_t height, uint32_t bufferCount, bool supportTearing) const;
+    ComPtr<D3D12DescriptorHeapInterface> CreateDescriptorHeap(ComPtr<D3D12DeviceInterface> device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors) const;
 
 private:
     static const UINT FrameBufferCount { 2 };
@@ -49,14 +51,14 @@ private:
     ComPtr<ID3D12PipelineState> m_pipelineState;
 
     // Synchronization objects.
-    UINT m_CurrentBackBufferIndex { 0 }; // store the index of the current back buffer of the swap chain.
+    UINT m_currentBackBufferIndex { 0 }; // store the index of the current back buffer of the swap chain.
     
     ComPtr<ID3D12Fence> m_fence;
     UINT64 m_fenceValue { 0 };
     HANDLE m_fenceEvent { };
     
     // Window rectangle (used to toggle fullscreen state).
-    RECT g_WindowRect;
+    RECT m_windowRect;
     bool m_useFullScreen { false };
 
     bool m_vSyncEnabled { false }; // controls whether the swap chain's present method should wait for the next vertical refresh before presenting the rendered image to the screen.
