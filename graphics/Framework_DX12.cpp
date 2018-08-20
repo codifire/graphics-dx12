@@ -152,6 +152,7 @@ void Framework_DX12::Init()
     m_commandList = CreateCommandList(m_device, m_commandAllocator, D3D12_COMMAND_LIST_TYPE_DIRECT);
 
     m_fence = CreateFence(m_device);
+    m_fenceValue = 0;
 }
 
 void Framework_DX12::Update()
@@ -332,4 +333,36 @@ ComPtr<ID3D12Fence> Framework_DX12::CreateFence(ComPtr<D3D12DeviceInterface> dev
     ComPtr<ID3D12Fence> fence;
     ThrowIfFailed(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)));
     return fence;
+}
+
+HANDLE Framework_DX12::CreateEventHandle()
+{
+    HANDLE osEvent;
+    
+    osEvent = ::CreateEvent(NULL, FALSE, FALSE, NULL);
+    assert(osEvent && "Failed to create event.");
+
+    return osEvent;
+}
+
+UINT64 Framework_DX12::SignalFenceGPU(ComPtr<ID3D12CommandQueue> commandQueue, ComPtr<ID3D12Fence> fence, UINT64& fenceValue) const
+{
+    ++fenceValue;
+    ThrowIfFailed(commandQueue->Signal(fence.Get(), fenceValue));
+    return fenceValue;
+}
+
+void Framework_DX12::WaitForFenceValue(ComPtr<ID3D12Fence> fence, uint64_t targetFenceValue, HANDLE fenceEvent, std::chrono::milliseconds duration) const
+{
+    if (fence->GetCompletedValue() < targetFenceValue)
+    {
+        ThrowIfFailed(fence->SetEventOnCompletion(targetFenceValue, fenceEvent));
+        ::WaitForSingleObject(fenceEvent, static_cast<DWORD>(duration.count()));
+    }
+}
+
+void Framework_DX12::FlushGPUCommandQueue(ComPtr<ID3D12CommandQueue> commandQueue, ComPtr<ID3D12Fence> fence, UINT64&  fenceValue, HANDLE fenceEvent) const
+{
+    const auto flushFenceValue = SignalFenceGPU(commandQueue, fence, fenceValue);
+    WaitForFenceValue(fence, flushFenceValue, fenceEvent);
 }

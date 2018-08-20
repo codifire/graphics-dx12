@@ -1,6 +1,7 @@
 #pragma once
 #include "Framework.h"
 #include "graphics.h"
+#include <chrono>
 
 class Framework_DX12 : public Framework
 {
@@ -31,6 +32,11 @@ public:
     ComPtr<ID3D12CommandAllocator> CreateCommandAllocator(ComPtr<D3D12DeviceInterface> device, D3D12_COMMAND_LIST_TYPE type) const;
     ComPtr<ID3D12GraphicsCommandList> CreateCommandList(ComPtr<D3D12DeviceInterface> device, ComPtr<ID3D12CommandAllocator> commandAllocator, D3D12_COMMAND_LIST_TYPE type) const;
     ComPtr<ID3D12Fence> CreateFence(ComPtr<D3D12DeviceInterface> device) const;
+    UINT64 SignalFenceGPU(ComPtr<ID3D12CommandQueue> commandQueue, ComPtr<ID3D12Fence> fence, UINT64& fenceValue) const;
+    void WaitForFenceValue(ComPtr<ID3D12Fence> fence, uint64_t targetFenceValue, HANDLE fenceEvent, std::chrono::milliseconds duration = std::chrono::milliseconds::max()) const;
+    void FlushGPUCommandQueue(ComPtr<ID3D12CommandQueue> commandQueue, ComPtr<ID3D12Fence> fence, UINT64& fenceValue, HANDLE fenceEvent) const;
+
+    static HANDLE CreateEventHandle();
 
     protected:
     static const UINT FrameBufferCount { 2 };
