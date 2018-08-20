@@ -28,8 +28,9 @@ public:
     ComPtr<DXGISwapChainInterface> CreateSwapChain(HWND hWnd, ComPtr<DXGIFactoryInterface> dxgiFactory, ComPtr<ID3D12CommandQueue> commandQueue, uint32_t width, uint32_t height, uint32_t bufferCount, bool supportTearing) const;
     ComPtr<D3D12DescriptorHeapInterface> CreateDescriptorHeap(ComPtr<D3D12DeviceInterface> device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors) const;
     void UpdateRenderTargetViews(ComPtr<D3D12DeviceInterface> device, ComPtr<DXGISwapChainInterface> swapChain, ComPtr<D3D12DescriptorHeapInterface> descriptorHeap, UINT nFrameBuffer);
+    ComPtr<ID3D12CommandAllocator> CreateCommandAllocator(ComPtr<D3D12DeviceInterface> device, D3D12_COMMAND_LIST_TYPE type) const;
 
-private:
+protected:
     static const UINT FrameBufferCount { 2 };
 
     // Pipeline objects.
