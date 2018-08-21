@@ -117,7 +117,7 @@ int Win32Application::Run(Framework* frameworkPtr, HINSTANCE hInstance, int nCmd
 		}
 	}
 
-	frameworkPtr->Destroy();
+	frameworkPtr->Release();
 
 	// Return this part of the WM_QUIT message to Windows.
 	return static_cast<char>(msg.wParam);

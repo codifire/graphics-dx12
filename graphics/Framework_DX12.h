@@ -21,7 +21,11 @@ public:
     virtual void Init() override;
     virtual void Update() override;
     virtual void Render() override;
-    virtual void Destroy() override;
+    virtual void Release() override;
+
+    void Resize(UINT32 width, UINT32 height);
+
+    bool initialized() const { return m_initialized; }
 
     void EnableDebugLayer() const;
     ComPtr<D3D12DeviceInterface> CreateDevice(ComPtr<DXGIAdapterInterface> adapter) const;
@@ -39,11 +43,11 @@ public:
     static HANDLE CreateEventHandle();
 
     protected:
-    static const UINT FrameBufferCount { 2 };
+    static const UINT FrameBufferCount { 3 };
 
     // Pipeline objects.
     ComPtr<ID3D12GraphicsCommandList> m_commandList; // generally varies w.r.t number of threads recording drawing commands
-    ComPtr<ID3D12CommandAllocator> m_commandAllocator; // a command allocator cannot be reused unless all of the commands that have been 
+    ComPtr<ID3D12CommandAllocator> m_commandAllocators[FrameBufferCount]; // a command allocator cannot be reused unless all of the commands that have been 
                                                        // recorded into the command allocator have finished executing on the GPU.
     // There must be at least one command allocator per render frame that is "in-flight" (at least one per command-list, per back buffer of the swap chain).
 
@@ -52,6 +56,8 @@ public:
     ComPtr<D3D12DeviceInterface> m_device; // display adapter. a system can also have a software display adapter that emulates 3D hardware functionality.
     ComPtr<DXGISwapChainInterface> m_swapChain;
     ComPtr<ID3D12Resource> m_backBuffers[FrameBufferCount]; // are basically textures (or render targets)
+    UINT m_currentBackBufferIndex{ 0 }; // store the index of the current back buffer of the swap chain.
+
     ComPtr<ID3D12DescriptorHeap> m_rtvDescriptorHeap; // a "view" is a synonym for "descriptor". view (or descriptors) describe the resource to the GPU
     // since the swap chain contains multiple back buffer textures, one descriptor is needed to describe each back buffer texture.
 
@@ -63,10 +69,11 @@ public:
     ComPtr<ID3D12PipelineState> m_pipelineState;
 
     // Synchronization objects.
-    UINT m_currentBackBufferIndex { 0 }; // store the index of the current back buffer of the swap chain.
-    
+    // Each thread or GPU queue should have at least one fence object and a corresponding fence value.
+    // The same fence object should not be signaled from more than one thread or GPU queue but more than one thread or queue can wait on the same fence to be signaled.
     ComPtr<ID3D12Fence> m_fence;
     UINT64 m_fenceValue { 0 };
+    uint64_t m_fenceValuesPerFrame[FrameBufferCount] = {};
     HANDLE m_fenceEvent { }; // An OS event handle is used to allow the CPU thread to wait until the fence has been signaled with a particular value.
     
     // Window rectangle (used to toggle fullscreen state).
@@ -79,4 +86,6 @@ public:
     bool m_useWarpDevice { false }; // controls whether to use a software rasterizer (Windows Advanced Rasterization Platform - WARP) or not
 
     bool m_enableDebugLayer { CONF_BOOL_ENABLE_D3D_DEBUG_LAYER };
+
+    bool m_initialized { false };
 };

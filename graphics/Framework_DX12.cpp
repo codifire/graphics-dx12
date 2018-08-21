@@ -2,6 +2,9 @@
 #include "Framework_DX12.h"
 #include "Win32Application.h"
 
+// TODO: Check ThrowIfFailed for input parameters, it should always be HRESULT
+// TODO: How many back buffers do we need in the swap chain 2,3 or 4
+
 namespace
 {
     using DXGIFactoryInterface = IDXGIFactory6;
@@ -147,12 +150,21 @@ void Framework_DX12::Init()
 
     UpdateRenderTargetViews(m_device, m_swapChain, m_rtvDescriptorHeap, FrameBufferCount);
 
-    m_commandAllocator = CreateCommandAllocator(m_device, D3D12_COMMAND_LIST_TYPE_DIRECT);
+    for (UINT i = 0; i < FrameBufferCount; ++i)
+    {
+        m_commandAllocators[i] = CreateCommandAllocator(m_device, D3D12_COMMAND_LIST_TYPE_DIRECT);
+    }
 
-    m_commandList = CreateCommandList(m_device, m_commandAllocator, D3D12_COMMAND_LIST_TYPE_DIRECT);
+    m_commandList = CreateCommandList(m_device, m_commandAllocators[m_currentBackBufferIndex], D3D12_COMMAND_LIST_TYPE_DIRECT);
 
     m_fence = CreateFence(m_device);
+    m_fenceEvent = CreateEventHandle();
     m_fenceValue = 0;
+    for (UINT i = 0; i < FrameBufferCount; ++i) 
+        m_fenceValuesPerFrame[i] = 0;
+
+    // initialization complete!
+    m_initialized = true;
 }
 
 void Framework_DX12::Update()
@@ -162,12 +174,95 @@ void Framework_DX12::Update()
 
 void Framework_DX12::Render()
 {
-    
+    auto commandAllocator = m_commandAllocators[m_currentBackBufferIndex];
+    auto backBuffer = m_backBuffers[m_currentBackBufferIndex];
+
+    commandAllocator->Reset();
+    m_commandList->Reset(commandAllocator.Get(), nullptr);
+
+    // clear the render target
+    {
+        // transition the back buffer to render target
+        CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+            backBuffer.Get(),
+            D3D12_RESOURCE_STATE_PRESENT,
+            D3D12_RESOURCE_STATE_RENDER_TARGET
+        );
+
+        m_commandList->ResourceBarrier(1, &barrier);
+
+        // clear the back buffer
+        FLOAT clearColor[] = { 0.4f, 0.6f, 0.9f, 1.0f };
+        CD3DX12_CPU_DESCRIPTOR_HANDLE rtv(
+            m_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), // start of the heap
+            m_currentBackBufferIndex, // number of increments
+            m_rtvDescriptorSize // size of increment
+        );
+
+        m_commandList->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
+    }
+
+    // present the render target
+    {
+        // transition the back buffer to present
+        CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+            backBuffer.Get(),
+            D3D12_RESOURCE_STATE_RENDER_TARGET,
+            D3D12_RESOURCE_STATE_PRESENT
+        );
+
+        m_commandList->ResourceBarrier(1, &barrier);
+
+        // close then execute the command list
+        ThrowIfFailed(m_commandList->Close());
+
+        ID3D12CommandList* const commandLists[] = { m_commandList.Get() };
+        m_commandQueue->ExecuteCommandLists(_countof(commandLists), commandLists);
+
+        // present back buffer
+        const UINT syncInterval = m_vSyncEnabled ? 1 : 0;
+        const UINT presentFlags = m_supportTearing && !m_vSyncEnabled ? DXGI_PRESENT_ALLOW_TEARING : 0;
+        ThrowIfFailed(m_swapChain->Present(syncInterval, presentFlags));
+
+        m_fenceValuesPerFrame[m_currentBackBufferIndex] = SignalFenceGPU(m_commandQueue, m_fence, m_fenceValue);
+
+        m_currentBackBufferIndex = m_swapChain->GetCurrentBackBufferIndex();
+
+        WaitForFenceValue(m_fence, m_fenceValuesPerFrame[m_currentBackBufferIndex], m_fenceEvent);
+    }
 }
 
-void Framework_DX12::Destroy()
+void Framework_DX12::Release()
 {
-    
+    FlushGPUCommandQueue(m_commandQueue, m_fence, m_fenceValue, m_fenceEvent);
+
+    ::CloseHandle(m_fenceEvent);
+}
+
+void Framework_DX12::Resize(UINT32 newWidth, UINT32 newHeight)
+{
+    if (GetWidth() != newWidth || GetHeight() != newHeight)
+    {
+        SetWidthHeight(std::max(1u, newWidth), std::max(1u, newHeight)); // Don't allow 0 size swap chain back buffers.
+
+        // Flush the GPU queue to make sure the swap chain's back buffers
+        // are not being referenced by an in-flight command list.
+        FlushGPUCommandQueue(m_commandQueue, m_fence, m_fenceValue, m_fenceEvent);
+
+        for (UINT i = 0; i < FrameBufferCount; ++i)
+        {
+            m_backBuffers[i].Reset();
+            m_fenceValuesPerFrame[i] = m_fenceValue; // since we have already done the flush its safe to set it to anything less than m_fenceValue + 1.
+        }
+
+        DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
+        ThrowIfFailed(m_swapChain->GetDesc(&swapChainDesc));
+        ThrowIfFailed(m_swapChain->ResizeBuffers(FrameBufferCount, GetWidth(), GetHeight(), swapChainDesc.BufferDesc.Format, swapChainDesc.Flags));
+
+        m_currentBackBufferIndex = m_swapChain->GetCurrentBackBufferIndex();
+
+        UpdateRenderTargetViews(m_device, m_swapChain, m_rtvDescriptorHeap, FrameBufferCount);
+    }
 }
 
 void Framework_DX12::EnableDebugLayer() const
