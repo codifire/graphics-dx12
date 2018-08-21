@@ -22,10 +22,7 @@ public:
     virtual void Update() override;
     virtual void Render() override;
     virtual void Release() override;
-
-    void Resize(UINT32 width, UINT32 height);
-
-    bool initialized() const { return m_initialized; }
+    virtual void Resize(UINT32 width, UINT32 height) override;
 
     void EnableDebugLayer() const;
     ComPtr<D3D12DeviceInterface> CreateDevice(ComPtr<DXGIAdapterInterface> adapter) const;
@@ -75,10 +72,6 @@ public:
     UINT64 m_fenceValue { 0 };
     uint64_t m_fenceValuesPerFrame[FrameBufferCount] = {};
     HANDLE m_fenceEvent { }; // An OS event handle is used to allow the CPU thread to wait until the fence has been signaled with a particular value.
-    
-    // Window rectangle (used to toggle fullscreen state).
-    RECT m_windowRect;
-    bool m_useFullScreen { false };
 
     bool m_vSyncEnabled { false }; // controls whether the swap chain's present method should wait for the next vertical refresh before presenting the rendered image to the screen.
     bool m_supportTearing { false };
@@ -86,6 +79,4 @@ public:
     bool m_useWarpDevice { false }; // controls whether to use a software rasterizer (Windows Advanced Rasterization Platform - WARP) or not
 
     bool m_enableDebugLayer { CONF_BOOL_ENABLE_D3D_DEBUG_LAYER };
-
-    bool m_initialized { false };
 };

@@ -164,7 +164,7 @@ void Framework_DX12::Init()
         m_fenceValuesPerFrame[i] = 0;
 
     // initialization complete!
-    m_initialized = true;
+    SetInitialized();
 }
 
 void Framework_DX12::Update()
