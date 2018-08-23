@@ -40,7 +40,7 @@ public:
     static HANDLE CreateEventHandle();
 
     protected:
-    static const UINT FrameBufferCount { 3 };
+    static const UINT FrameBufferCount { 4 };
 
     // Pipeline objects.
     ComPtr<ID3D12GraphicsCommandList> m_commandList; // generally varies w.r.t number of threads recording drawing commands

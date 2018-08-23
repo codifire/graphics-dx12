@@ -418,7 +418,7 @@ ComPtr<ID3D12GraphicsCommandList> Framework_DX12::CreateCommandList(ComPtr<D3D12
     ComPtr<ID3D12GraphicsCommandList> commandList;
     ThrowIfFailed(device->CreateCommandList(0, type, commandAllocator.Get(), nullptr, IID_PPV_ARGS(&commandList)));
 
-    ThrowIfFailed(commandList->Close());
+    ThrowIfFailed(commandList->Close()); // in the render loop we always reset it first, so it must be closed initially
 
     return commandList;
 }
@@ -449,7 +449,8 @@ UINT64 Framework_DX12::SignalFenceGPU(ComPtr<ID3D12CommandQueue> commandQueue, C
 
 void Framework_DX12::WaitForFenceValue(ComPtr<ID3D12Fence> fence, uint64_t targetFenceValue, HANDLE fenceEvent, std::chrono::milliseconds duration) const
 {
-    if (fence->GetCompletedValue() < targetFenceValue)
+    const auto completedFenceValue (fence->GetCompletedValue());
+    if (completedFenceValue < targetFenceValue)
     {
         ThrowIfFailed(fence->SetEventOnCompletion(targetFenceValue, fenceEvent));
         ::WaitForSingleObject(fenceEvent, static_cast<DWORD>(duration.count()));

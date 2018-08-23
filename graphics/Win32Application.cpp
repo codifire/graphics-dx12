@@ -108,6 +108,8 @@ int Win32Application::Run(Framework* frameworkPtr, HINSTANCE hInstance, int nCmd
     m_hwnd = CreateWindow(windowClassName, hInstance, L"Rendering", frameworkPtr->GetWidth(), frameworkPtr->GetHeight(),
                           frameworkPtr);
 
+    ::GetWindowRect(GetHwnd(), &m_windowRect); // cache settings
+
     frameworkPtr->Init();
 
     ShowWindow(m_hwnd, nCmdShow);
